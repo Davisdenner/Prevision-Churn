@@ -1,5 +1,4 @@
 import pandas as pd
-
 def get_feature_lists(df:pd.DataFrame):
     target = "Churn"
     X = df.drop(columns = [target, "customerID"])
