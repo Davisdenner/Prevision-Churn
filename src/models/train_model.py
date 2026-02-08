@@ -28,7 +28,7 @@ def main():
 
     model = RandomForestClassifier(
         n_estimators = 200,
-        random_state = 42,
+        random_state = 31,
         class_weight = 'balanced'
     )
 
