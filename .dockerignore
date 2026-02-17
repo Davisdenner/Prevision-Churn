@@ -1,0 +1,10 @@
+.venv/
+.git/
+.idea/
+__pycache__/
+*.pyc
+src/data/
+src/reports/
+src/visualization/
+*.csv
+README.md
