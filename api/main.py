@@ -70,19 +70,28 @@ def _get_risk_level(probability: float) -> str:
         return "MEDIUM"
     return "LOW"
 
+
 def _get_shap_explanation(app_state, df: pd.DataFrame, top_n: int = 5) -> list[dict]:
     X_transformed = app_state.preprocessor.transform(df)
     feature_names = app_state.preprocessor.get_feature_names_out()
 
     shap_values = app_state.explainer.shap_values(X_transformed)
 
-    #classificação binária, pegar os valores da classe positiva (churn=1)
+    #SHAP >= 0.42 retorna ndarray 3D (n_samples, n_features, n_classes)
+    #SHAP < 0.42 retorna lista de arrays [classe_0, classe_1]
     if isinstance(shap_values, list):
-        shap_values = shap_values[1]
+        shap_row = shap_values[1][0]  # classe 1 (churn), amostra 0
+    elif shap_values.ndim == 3:
+        shap_row = shap_values[0, :, 1]  # amostra 0, todas as features, classe 1
+    else:
+        #fallback: array 2D (n_samples, n_features) — regressão ou binário simplificado
+        shap_row = shap_values[0]
 
-    shap_row = shap_values[0]  #apenas 1 amostra
-
-    feature_impact = sorted(zip(feature_names, shap_row),key=lambda x: abs(x[1]),reverse=True,)[:top_n]
+    feature_impact = sorted(
+        zip(feature_names, shap_row),
+        key=lambda x: abs(float(x[1])),
+        reverse=True,
+    )[:top_n]
 
     return [
         {
@@ -92,7 +101,6 @@ def _get_shap_explanation(app_state, df: pd.DataFrame, top_n: int = 5) -> list[d
         }
         for name, value in feature_impact
     ]
-
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict_churn(data: CustomerInput):
