@@ -6,6 +6,8 @@ import pandas as pd
 import numpy as np
 import shap
 from pathlib import Path
+import time
+from api.monitoring import monitor
 
 base_path = Path(__file__).resolve().parents[1]
 model_path = base_path / "src" / "models" / "churn_pipeline.pkl"
@@ -29,7 +31,6 @@ async def lifespan(app: FastAPI):
 
     yield
     print("Aplicação finalizando...")
-
 
 app = FastAPI(title="Churn Prediction API", lifespan=lifespan)
 
@@ -98,10 +99,14 @@ def predict_churn(data: CustomerInput):
     if app.state.pipeline is None:
         raise HTTPException(status_code=503, detail="Modelo não foi carregado corretamente")
 
+    start_time = time.perf_counter()
     try:
         df = pd.DataFrame([data.model_dump()])
         proba = app.state.pipeline.predict_proba(df)[0, 1]
         explanation = _get_shap_explanation(app.state, df)
+
+        latency_ms = (time.perf_counter() - start_time) * 1000
+        monitor.record_prediction(float(proba), latency_ms)
 
         return PredictionResponse(
             churn_probability=round(float(proba), 4),
@@ -109,6 +114,7 @@ def predict_churn(data: CustomerInput):
             top_features=explanation,
         )
     except Exception as e:
+        monitor.record_error()
         raise HTTPException(status_code=500, detail=f"Erro na predição: {str(e)}")
 
 
@@ -123,3 +129,8 @@ def health_check():
         "status": "healthy",
         "model_loaded": app.state.pipeline is not None,
     }
+
+
+@app.get("/metrics")
+def get_model_metrics():
+    return monitor.get_metrics()
