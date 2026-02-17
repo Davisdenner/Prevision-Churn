@@ -1,7 +1,8 @@
-pandas
-scikit-learn
-shap
-matplotlib
-fastapi
-uvicorn
-joblib
+pandas>=2.0,<3.0
+scikit-learn>=1.3,<2.0
+shap>=0.49,<1.0
+matplotlib>=3.7,<4.0
+fastapi>=0.100,<1.0
+uvicorn>=0.20,<1.0
+joblib>=1.3,<2.0
+numpy>=1.24,<3.0
